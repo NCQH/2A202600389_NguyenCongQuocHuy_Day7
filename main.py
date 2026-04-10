@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from ast import List, Tuple
 import os
 import sys
 from pathlib import Path
+from xmlrpc import client
 
 from dotenv import load_dotenv
 
@@ -19,13 +21,13 @@ from src.models import Document
 from src.store import EmbeddingStore
 
 SAMPLE_FILES = [
-    "data/python_intro.txt",
-    "data/vector_store_notes.md",
-    "data/rag_system_design.md",
-    "data/customer_support_playbook.txt",
+    # "data/python_intro.txt",
+    # "data/vector_store_notes.md",
+    # "data/rag_system_design.md",
+    # "data/customer_support_playbook.txt",
     "data/chunking_experiment_report.md",
     "data/vi_retrieval_notes.md",
-    "data/nauan.md"
+    "data/huong_dan_nau_an.md"
 ]
 
 
@@ -59,8 +61,24 @@ def load_documents_from_files(file_paths: list[str]) -> list[Document]:
 
 def demo_llm(prompt: str) -> str:
     """A simple mock LLM for manual RAG testing."""
-    preview = prompt[:400].replace("\n", " ")
+    # preview = prompt[:400].replace("\n", " ")
+    preview = prompt
     return f"[DEMO LLM] Generated answer from prompt preview: {preview}..."
+
+def call_gpt4(prompt: str) -> str:
+    """Call OpenAI GPT-4 API to generate an answer."""
+    import openai
+    client = openai.OpenAI()
+    response = client.chat.completions.create(
+    model="gpt-4o-mini",  # hoặc gpt-4o, gpt-5 tùy nhu cầu
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": prompt}
+    ],
+    temperature=0.7,
+    max_tokens=200
+)
+    return response.choices[0].message.content
 
 
 def run_manual_demo(question: str | None = None, sample_files: list[str] | None = None) -> int:
@@ -145,19 +163,64 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
     for index, result in enumerate(search_results, start=1):
         print(f"{index}. score={result['score']:.3f} source={result['metadata'].get('source')}")
         print(f"   content preview: {result['content'][:120].replace(chr(10), ' ')}...")
-
+    
     print("\n=== KnowledgeBaseAgent Test ===")
-    agent = KnowledgeBaseAgent(store=store, llm_fn=demo_llm)
+    agent = KnowledgeBaseAgent(store=store, llm_fn=call_gpt4)
     print(f"Question: {query}")
     print("Agent answer:")
     print(agent.answer(query, top_k=3))
 
     return 0
 
+from src.chunking import compute_similarity
+
+from typing import List, Tuple
+
+def compute_similarity_pairs(pairs: List[Tuple[str, str]], embed_fn):
+    """
+    pairs: list of (sentence_a, sentence_b)
+    embed_fn: function(text) -> vector (list[float])
+    """
+    results = []
+
+    for i, (a, b) in enumerate(pairs, 1):
+        emb_a = embed_fn(a)
+        emb_b = embed_fn(b)
+
+        score = compute_similarity(emb_a, emb_b)
+
+        pred = "high" if score >= 0.7 else "low"
+
+        results.append({
+            "pair": i,
+            "A": a,
+            "B": b,
+            "score": round(score, 3),
+            "pred": pred
+        })
+
+    return results
 
 def main() -> int:
-    question = " ".join(sys.argv[1:]).strip() if len(sys.argv) > 1 else None
-    return run_manual_demo(question=question)
+    # question = " ".join(sys.argv[1:]).strip() if len(sys.argv) > 1 else None
+    # return run_manual_demo(question=question)
+ 
+    embber = _mock_embed
+    pairs = [
+    ("Tôi thích ăn phở", "Tôi rất thích ăn phở bò"),
+    ("Trời hôm nay nóng", "Thời tiết hôm nay oi bức"),
+    ("Tôi học AI", "Con mèo đang ngủ"),
+    ("Tôi không thích cà phê", "Tôi thích cà phê"),
+    ("Tôi thích đọc sách", "Tôi thích viết văn")
+    ]
+
+    results = compute_similarity_pairs(pairs, embber)
+    for res in results:
+        print(f"Pair {res['pair']}: score={res['score']} pred={res['pred']}")
+        print(f"  A: {res['A']}")
+        print(f"  B: {res['B']}\n")
+
+    return 0
 
 
 if __name__ == "__main__":
