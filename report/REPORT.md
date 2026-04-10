@@ -1,8 +1,8 @@
 # Báo Cáo Lab 7: Embedding & Vector Store
 
-**Họ tên:** [Tên sinh viên]
-**Nhóm:** [Tên nhóm]
-**Ngày:** [Ngày nộp]
+**Họ tên:** Nguyễn Công Quốc Huy
+**Nhóm:** C401-A2
+**Ngày:** 10/4/2026
 
 ---
 
@@ -11,29 +11,48 @@
 ### Cosine Similarity (Ex 1.1)
 
 **High cosine similarity nghĩa là gì?**
-> *Viết 1-2 câu:*
+> High cosine similarity nghĩa là hai vector embedding có hướng rất giống nhau, tức là nội dung của hai câu có ý nghĩa gần giống nhau dù cách diễn đạt có thể khác.
 
 **Ví dụ HIGH similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao tương đồng:
+- Sentence A: “Tôi muốn đặt vé máy bay đi Hà Nội”
+- Sentence B: “Tôi cần mua vé máy bay đến Hà Nội”
+- Tại sao tương đồng: Hai câu có cùng ý định (intent): đặt/mua vé máy bay đến Hà Nội → vector biểu diễn gần cùng hướng nên cosine similarity cao.
 
 **Ví dụ LOW similarity:**
-- Sentence A:
-- Sentence B:
-- Tại sao khác:
+- Sentence A: “Tôi muốn đặt vé máy bay đi Hà Nội”
+- Sentence B: “Trời hôm nay rất đẹp và nhiều nắng”
+- Tại sao khác: Hai câu nói về hai chủ đề hoàn toàn khác nhau (du lịch vs thời tiết) → vector hướng khác nhau → cosine similarity thấp.
 
 **Tại sao cosine similarity được ưu tiên hơn Euclidean distance cho text embeddings?**
-> *Viết 1-2 câu:*
+> Cosine similarity tập trung vào độ giống về hướng (semantic meaning) và không bị ảnh hưởng bởi độ dài vector, trong khi Euclidean distance bị ảnh hưởng bởi magnitude nên kém ổn định hơn khi so sánh embedding text.
 
 ### Chunking Math (Ex 1.2)
 
 **Document 10,000 ký tự, chunk_size=500, overlap=50. Bao nhiêu chunks?**
-> *Trình bày phép tính:*
-> *Đáp án:*
+> **Trình bày phép tính:**
+>
+> - Chunk size = 500  
+> - Overlap = 50  
+> - Stride = 500 - 50 = 450  
+> 
+> Số chunks:
+> \[
+> N = \left\lceil \frac{10000 - 500}{450} \right\rceil + 1
+> \]
+>
+>\[
+>N = \left\lceil \frac{9500}{450} \right\rceil + 1
+>= \lceil 21.11 \rceil + 1
+>= 22 + 1 = 23
+>\]
+>
+>**Đáp án:** **23 chunks**
 
 **Nếu overlap tăng lên 100, chunk count thay đổi thế nào? Tại sao muốn overlap nhiều hơn?**
-> *Viết 1-2 câu:*
+> Overlap = 100 → stride = 500 - 100 = 400 (giảm so với 450)
+Khi stride giảm, số chunks sẽ **tăng lên** vì mỗi lần trượt đi ít hơn.
+>**Lý do dùng overlap lớn hơn:**
+Overlap lớn giúp các chunk **giữ lại nhiều ngữ cảnh liên tục hơn**, giảm mất thông tin ở ranh giới giữa các đoạn. Điều này đặc biệt quan trọng trong RAG để tránh việc câu hoặc ý nghĩa bị cắt đôi giữa các chunk.
 
 ---
 

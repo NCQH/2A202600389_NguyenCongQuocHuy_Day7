@@ -25,6 +25,7 @@ SAMPLE_FILES = [
     "data/customer_support_playbook.txt",
     "data/chunking_experiment_report.md",
     "data/vi_retrieval_notes.md",
+    "data/nauan.md"
 ]
 
 
@@ -83,7 +84,7 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
     for doc in docs:
         print(f"  - {doc.id}: {doc.metadata['source']}")
 
-    load_dotenv(override=False)
+    load_dotenv()
     provider = os.getenv(EMBEDDING_PROVIDER_ENV, "mock").strip().lower()
     if provider == "local":
         try:
@@ -100,8 +101,42 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
 
     print(f"\nEmbedding backend: {getattr(embedder, '_backend_name', embedder.__class__.__name__)}")
 
+    from src.chunking import ChunkingStrategyComparator
+    chunker = ChunkingStrategyComparator()
+
+    print("\n=== Chunking Strategy Comparison ===")
+    for doc in docs:
+        print(f"\nDocument: {doc.id} (source: {doc.metadata['source']})")
+        stats = chunker.compare(doc.content, chunk_size=500)
+        for strategy, data in stats.items():
+            print(f"  Strategy: {strategy}")
+            print(f"    - Number of chunks: {data['count']}")
+            print(f"    - Average chunk length: {data['avg_length']:.2f}")
+
+    from src.chunking import SectionChunker
+
+    chunker = SectionChunker(chunk_size=500)
+
+    print("\n=== Chunking and Storing in EmbeddingStore ===")    
+    chunked_docs = []
+
+    for doc in docs:
+        chunks = chunker.chunk(doc.content)
+
+        for i, chunk in enumerate(chunks):
+            chunked_docs.append(
+                Document(
+                    id=f"{doc.id}_{i}",   # ✅ FIX ở đây
+                    content=chunk,
+                    metadata={
+                        "source": doc.id,   # ✅ FIX ở đây (KHÔNG dùng path)
+                        "chunk_index": i
+                    }
+                )
+            )
+
     store = EmbeddingStore(collection_name="manual_test_store", embedding_fn=embedder)
-    store.add_documents(docs)
+    store.add_documents(chunked_docs)
 
     print(f"\nStored {store.get_collection_size()} documents in EmbeddingStore")
     print("\n=== EmbeddingStore Search Test ===")
@@ -116,6 +151,7 @@ def run_manual_demo(question: str | None = None, sample_files: list[str] | None 
     print(f"Question: {query}")
     print("Agent answer:")
     print(agent.answer(query, top_k=3))
+
     return 0
 
 

@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import math
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 LOCAL_EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 OPENAI_EMBEDDING_MODEL = "text-embedding-3-small"
@@ -34,6 +39,7 @@ class LocalEmbedder:
 
         self.model_name = model_name
         self._backend_name = model_name
+        self.model = None
         self.model = SentenceTransformer(model_name)
 
     def __call__(self, text: str) -> list[float]:
@@ -51,11 +57,14 @@ class OpenAIEmbedder:
 
         self.model_name = model_name
         self._backend_name = model_name
-        self.client = OpenAI()
+        #self.client = None
+        self.client = OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY")
+            )  # Initialize client here to catch auth errors early
 
     def __call__(self, text: str) -> list[float]:
         response = self.client.embeddings.create(model=self.model_name, input=text)
         return [float(value) for value in response.data[0].embedding]
 
 
-_mock_embed = MockEmbedder()
+_mock_embed = OpenAIEmbedder()
